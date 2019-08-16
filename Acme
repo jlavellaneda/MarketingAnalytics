@@ -1,0 +1,17 @@
+# Load RODBC package
+library(RODBC)
+# Connect to Access db
+channel <- odbcDriverConnect("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=C:/Users/Daniel/Downloads/SUPERACME1820/A.accdb")
+# Get Data
+TableCliente <- sqlFetch(channel, "Clientes")
+TableLineas <- sqlFetch(channel, "Lineas")
+TableProductos <- sqlFetch(channel, "Productos")
+#Explore Data
+summary(TableCliente)
+View(TableCliente)
+View(TableLineas)
+boxplot(TableProductos$ProdPrecio)
+hist(TableProductos$ProdPrecio)
+boxplot(TableProductos$ProdMarkup)
+hist(TableCliente$CliIngrMes, col = "Purple")
+boxplot(TableCliente$CliIngrMes, col = "Purple")
