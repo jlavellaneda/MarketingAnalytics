@@ -1,17 +1,25 @@
 # Load RODBC package
 library(RODBC)
+library(rpivotTable)
 # Connect to Access db
 channel <- odbcDriverConnect("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=C:/Users/Daniel/Downloads/SUPERACME1820/A.accdb")
 # Get Data
 TableCliente <- sqlFetch(channel, "Clientes")
 TableLineas <- sqlFetch(channel, "Lineas")
 TableProductos <- sqlFetch(channel, "Productos")
+TableVentasFacturaLinea <- sqlFetch(channel, "VentasFacturaLinea")
 #Explore Data
 summary(TableCliente)
 View(TableCliente)
 View(TableLineas)
+View(TableVentasFacturaLinea)
 boxplot(TableProductos$ProdPrecio)
 hist(TableProductos$ProdPrecio)
 boxplot(TableProductos$ProdMarkup)
 hist(TableCliente$CliIngrMes, col = "Purple")
 boxplot(TableCliente$CliIngrMes, col = "Purple")
+hist(TableVentasFacturaLinea$VFLValTot, col = "Purple")
+#Summary
+query1 <- aggregate(TableVentasFacturaLinea$VFLValTot, by=list(TableVentasFacturaLinea$IdFactura), FUN=sum)
+View(query1)
+hist(query1$x, col = "Purple")
