@@ -4,8 +4,73 @@ library(rpivotTable)
 library(ggplot2)
 library(ggfortify)
 library(magrittr)
+library(factoextra)
 ## Connect to Access db
 channel <- odbcDriverConnect("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=C:/Users/Daniel/Downloads/SUPERACME1820/A.accdb")
+
+## Get Data
+Clientes <- sqlFetch(channel, "Clientes")
+Lineas <- sqlFetch(channel, "Lineas")
+ProdProv <- sqlFetch(channel, "ProdProv")
+ProductoAreaSectorNivel <- sqlFetch(channel, "ProductoAreaSectorNivel")
+Productos <- sqlFetch(channel, "Productos")
+Proveedores <- sqlFetch(channel, "Proveedores")
+Regionales <- sqlFetch(channel, "Regionales")
+Sector <- sqlFetch(channel, "Sector")
+Sucursales <- sqlFetch(channel, "Sucursales")
+VentasFactura <- sqlFetch(channel, "VentasFactura")
+VentasFacturaLinea <- sqlFetch(channel, "VentasFacturaLinea")
+
+#Explore Data
+
+boxplot(data$VFLMarkup, data2$VFLMarkup, main="Boxplot of Markup of Wine and Pasta", col = "#00AFBB", names = c("Pasta","Wine"))
+boxplot(data$VFLPrecio, data2$VFLPrecio, main="Boxplot of Price", col = "#00AFBB", names = c("Pasta", "Wine"))
+#Summary
+
+
+-------------
+  
+
+View(query1)
+hist(query1$x, col = "#00AFBB")
+
+#Querys
+
+#2
+data_pasta <- sqlQuery(channel,
+                 '
+  select
+      f.*,
+      p.ProdNombre,
+      s.SucRegional
+  from
+  ((VentasFacturaLinea f
+  inner join Productos p on
+      (p.IdProducto = f.IdProducto and p.IdLinea = 65))
+  inner join VentasFactura v on
+      (f.IdFactura = v.IdFactura))
+  inner join Sucursales s on
+      (s.IdSuc = v.IdSuc and s.SucRegional = 10)
+'
+)
+
+#3
+data_wine <- sqlQuery(channel,
+                 '
+  select
+      f.*,
+      p.ProdNombre,
+      s.SucRegional
+  from
+  ((VentasFacturaLinea f
+  inner join Productos p on
+      (p.IdProducto = f.IdProducto and p.IdLinea = 82))
+  inner join VentasFactura v on
+      (f.IdFactura = v.IdFactura))
+  inner join Sucursales s on
+      (s.IdSuc = v.IdSuc and s.SucRegional = 10)
+'
+)
 
 # Customer Query Wine
 data_customer_wine <- sqlQuery(channel,
@@ -32,7 +97,7 @@ query1_wine <- setNames(query1_wine, c("IdCliente","Cantidad"))
 query2_wine <- setNames(query2_wine, c("IdCliente","Markup"))
 QMVino <- merge(x=query1_wine, y=query2_wine, by="IdCliente", all = TRUE)
 
-plot(IncomeTimeSeries$Markup~IncomeTimeSeries$Cantidad, col="#00AFBB",main= "Cantidad y Markup en Vinos", xlab="Cantidad", ylab="Markup")
+plot(QMVino$Markup~QMVino$Cantidad, col="#00AFBB",main= "Cantidad y Markup en Vinos", xlab="Cantidad", ylab="Markup")
 
 # Customer Query Pasta
 data_customer_pasta <- sqlQuery(channel,
@@ -62,8 +127,16 @@ QMPasta <- merge(x=query1_pasta, y=query2_pasta, by="IdCliente", all = TRUE)
 plot(QMPasta$Markup~QMPasta$Cantidad, col="#00AFBB",main= "Cantidad y Markup en Pasta", xlab="Cantidad", ylab="Markup")
 
 #Boxplots
-boxplot(QMPasta$Markup, IncomeTimeSeries$Markup, main="Distribución de Markup por Línea", col = "#00AFBB", names = c("Pasta","Wine"), horizontal = TRUE)
-boxplot(QMPasta$Cantidad, IncomeTimeSeries$Cantidad, main="Distribución de Cantidad por Línea", col = "#00AFBB", names = c("Pasta", "Wine"))
+boxplot(QMPasta$Markup, QMVino$Markup, main="Distribución de Markup por Línea", col = "#00AFBB", names = c("Pasta","Wine"), horizontal = TRUE)
+boxplot(QMPasta$Cantidad, QMVino$Cantidad, main="Distribución de Cantidad por Línea", col = "#00AFBB", names = c("Pasta", "Wine"))
 
-
-
+#Clustering Wine Customers
+wine.distance <- get_dist(QMVino, method = "pearson")
+fviz_dist(wine.distance, lab_size = 8)
+res.hc.wine <- hclust(wine.distance, method = "ward.D2")
+plot(res.hc.wine, cex = 0.5)
+res.km.wine <- eclust(QMVino, "kmeans", nstart = 25)
+res.hc.wine2 <- eclust(QMVino, "hclust") # compute hclust
+fviz_cluster(res.hc.wine2)
+res.hc.wine2
+res.km.wine
