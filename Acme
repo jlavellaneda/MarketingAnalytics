@@ -1,25 +1,69 @@
 # Load RODBC package
 library(RODBC)
 library(rpivotTable)
-# Connect to Access db
+library(ggplot2)
+library(ggfortify)
+library(magrittr)
+## Connect to Access db
 channel <- odbcDriverConnect("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=C:/Users/Daniel/Downloads/SUPERACME1820/A.accdb")
-# Get Data
-TableCliente <- sqlFetch(channel, "Clientes")
-TableLineas <- sqlFetch(channel, "Lineas")
-TableProductos <- sqlFetch(channel, "Productos")
-TableVentasFacturaLinea <- sqlFetch(channel, "VentasFacturaLinea")
-#Explore Data
-summary(TableCliente)
-View(TableCliente)
-View(TableLineas)
-View(TableVentasFacturaLinea)
-boxplot(TableProductos$ProdPrecio)
-hist(TableProductos$ProdPrecio)
-boxplot(TableProductos$ProdMarkup)
-hist(TableCliente$CliIngrMes, col = "Purple")
-boxplot(TableCliente$CliIngrMes, col = "Purple")
-hist(TableVentasFacturaLinea$VFLValTot, col = "Purple")
-#Summary
-query1 <- aggregate(TableVentasFacturaLinea$VFLValTot, by=list(TableVentasFacturaLinea$IdFactura), FUN=sum)
-View(query1)
-hist(query1$x, col = "Purple")
+
+# Customer Query Wine
+data_customer_wine <- sqlQuery(channel,
+                      '
+  select
+      v.*,
+      f.*,
+      p.ProdNombre,
+      s.SucRegional
+  from
+  ((VentasFacturaLinea f
+  inner join Productos p on
+      (p.IdProducto = f.IdProducto and p.IdLinea = 82))
+  inner join VentasFactura v on
+      (f.IdFactura = v.IdFactura))
+  inner join Sucursales s on
+      (s.IdSuc = v.IdSuc and s.SucRegional = 10)
+'
+)
+
+query1_wine <- aggregate(data_customer_wine$VFLCantidad, by=list(data_customer_wine$IdCliente), FUN=sum)
+query2_wine <- aggregate(data_customer_wine$VFLMarkup, by=list(data_customer_wine$IdCliente), FUN=mean)
+query1_wine <- setNames(query1_wine, c("IdCliente","Cantidad"))
+query2_wine <- setNames(query2_wine, c("IdCliente","Markup"))
+QMVino <- merge(x=query1_wine, y=query2_wine, by="IdCliente", all = TRUE)
+
+plot(IncomeTimeSeries$Markup~IncomeTimeSeries$Cantidad, col="#00AFBB",main= "Cantidad y Markup en Vinos", xlab="Cantidad", ylab="Markup")
+
+# Customer Query Pasta
+data_customer_pasta <- sqlQuery(channel,
+                               '
+  select
+      v.*,
+      f.*,
+      p.ProdNombre,
+      s.SucRegional
+  from
+  ((VentasFacturaLinea f
+  inner join Productos p on
+      (p.IdProducto = f.IdProducto and p.IdLinea = 65))
+  inner join VentasFactura v on
+      (f.IdFactura = v.IdFactura))
+  inner join Sucursales s on
+      (s.IdSuc = v.IdSuc and s.SucRegional = 10)
+'
+)
+
+query1_pasta <- aggregate(data_customer_pasta$VFLCantidad, by=list(data_customer_pasta$IdCliente), FUN=sum)
+query2_pasta <- aggregate(data_customer_pasta$VFLMarkup, by=list(data_customer_pasta$IdCliente), FUN=mean)
+query1_pasta <- setNames(query1_pasta, c("IdCliente","Cantidad"))
+query2_pasta <- setNames(query2_pasta, c("IdCliente","Markup"))
+QMPasta <- merge(x=query1_pasta, y=query2_pasta, by="IdCliente", all = TRUE)
+
+plot(QMPasta$Markup~QMPasta$Cantidad, col="#00AFBB",main= "Cantidad y Markup en Pasta", xlab="Cantidad", ylab="Markup")
+
+#Boxplots
+boxplot(QMPasta$Markup, IncomeTimeSeries$Markup, main="Distribución de Markup por Línea", col = "#00AFBB", names = c("Pasta","Wine"), horizontal = TRUE)
+boxplot(QMPasta$Cantidad, IncomeTimeSeries$Cantidad, main="Distribución de Cantidad por Línea", col = "#00AFBB", names = c("Pasta", "Wine"))
+
+
+
