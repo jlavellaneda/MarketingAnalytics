@@ -1,3 +1,4 @@
+#avellanedawilches.us.qlikcloud.com
 # Load RODBC package
 library(RODBC)
 library(rpivotTable)
